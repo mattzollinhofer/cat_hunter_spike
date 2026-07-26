@@ -4,6 +4,8 @@ extends Node
 ## helpers only — no real touch/mouse events — and checks the contract
 ## cat_controller.gd relies on:
 ##   1. Joystick "up" (Vector2(0, -1)) moves the cat -Z (forward).
+##   1c. The floating joystick's press-then-drag path produces the same
+##       direction math (a drag "up" yields a negative Y).
 ##   2. Stalk toggle on makes cat.is_stalking true.
 ##   3. A pounce press makes cat.is_pouncing true, and is one-shot.
 
@@ -49,6 +51,13 @@ func _run() -> void:
 		failures.append("joystick inside deadzone wrongly moved the cat")
 	touch.set_test_move(Vector2.ZERO)
 
+	# 1c. Floating joystick: press at (200, 200) then drag "up" to (200, 140)
+	# should yield a negative Y direction, same as the fixed-joystick path.
+	touch.set_test_floating(Vector2(200, 200), Vector2(200, 140))
+	if touch.get_move_direction().y >= -0.2:
+		failures.append("floating joystick drag 'up' did not produce a negative Y direction")
+	touch.set_test_move(Vector2.ZERO)
+
 	# 2. Stalk toggle on sets cat.is_stalking.
 	touch.set_test_stalk(true)
 	await get_tree().physics_frame
@@ -65,7 +74,7 @@ func _run() -> void:
 		failures.append("consume_pounce() did not clear after cat_controller read it (not one-shot)")
 
 	if failures.is_empty():
-		print("PASS: touch joystick movement, stalk toggle, and one-shot pounce all OK")
+		print("PASS: touch joystick movement (fixed and floating paths), stalk toggle, and one-shot pounce all OK")
 		get_tree().quit(0)
 	else:
 		for f in failures:

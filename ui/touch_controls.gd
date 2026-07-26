@@ -1,10 +1,11 @@
 extends CanvasLayer
-## Mobile touch controls: a virtual joystick for movement, a momentary Pounce
-## button, and a toggle Stalk button. Mirrors space_scroller's touch UI
-## pattern (Control nodes drawn with _draw() and read via _input(), exposing
-## plain getters the cat controller polls each physics frame). Controls are
-## always visible and also accept mouse input, so this works in a desktop
-## browser too.
+## Mobile touch controls: a floating virtual joystick for movement, a
+## momentary Pounce button, and a toggle Stalk button. Mirrors space_scroller's
+## touch UI pattern (Control nodes drawn with _draw() and read via _input(),
+## exposing plain getters the cat controller polls each physics frame). The
+## Pounce and Stalk buttons are always visible; the joystick only appears
+## once pressed, wherever that press lands in the left half of the screen.
+## All controls also accept mouse input, so this works in a desktop browser too.
 
 const MARGIN := 40.0
 const BUTTON_SIZE := 170.0
@@ -119,15 +120,14 @@ func _build_joystick() -> void:
 	_joystick = Control.new()
 	_joystick.name = "VirtualJoystick"
 	_joystick.set_script(load("res://ui/virtual_joystick.gd"))
-	var diameter: float = _joystick.joystick_radius * 2.0
+	_joystick.joystick_radius = 90.0
+	_joystick.thumb_radius = 40.0
+	# Cover the left half of the screen with no offsets, so the floating
+	# joystick can appear wherever the player presses in that region.
 	_joystick.anchor_left = 0.0
-	_joystick.anchor_top = 1.0
-	_joystick.anchor_right = 0.0
+	_joystick.anchor_top = 0.0
+	_joystick.anchor_right = 0.5
 	_joystick.anchor_bottom = 1.0
-	_joystick.offset_left = MARGIN
-	_joystick.offset_bottom = -MARGIN
-	_joystick.offset_top = _joystick.offset_bottom - diameter
-	_joystick.offset_right = _joystick.offset_left + diameter
 	add_child(_joystick)
 
 func _build_pounce_button() -> void:
@@ -172,9 +172,20 @@ func is_stalk_on() -> bool:
 func consume_pounce() -> bool:
 	return _pounce_button.consume_press()
 
+## Excludes taps landing on `control` from activating the joystick, so a tap
+## on that control (e.g. the pause button) isn't also swallowed by the
+## joystick underneath it.
+func set_joystick_exclude(control: Control) -> void:
+	_joystick.exclude_control = control
+
 ## Test helper: inject a joystick direction without real touch input.
 func set_test_move(v: Vector2) -> void:
 	_joystick.set_test_direction(v)
+
+## Test helper: activate the floating joystick at `center` and drag its
+## thumb toward `drag_to` (both local coordinates), without real touch input.
+func set_test_floating(center: Vector2, drag_to: Vector2) -> void:
+	_joystick.set_test_touch(center, drag_to)
 
 ## Test helper: force the stalk toggle to a known state.
 func set_test_stalk(on: bool) -> void:

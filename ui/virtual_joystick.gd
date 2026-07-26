@@ -1,7 +1,10 @@
 extends Control
-## Virtual joystick for touch input on mobile devices.
-## Provides a normalized direction vector that the player script can read.
-## Ported from space_scroller's scripts/ui/virtual_joystick.gd (game-agnostic).
+## Floating virtual joystick for touch input on mobile devices.
+## The base appears wherever the player first presses inside this control's
+## rect and the thumb tracks from there; releasing hides it again. Provides a
+## normalized direction vector that the player script can read.
+## Ported from space_scroller's scripts/ui/virtual_joystick.gd (game-agnostic),
+## then reworked from a fixed-position joystick to a floating one.
 
 ## Radius of the joystick base in pixels
 @export var joystick_radius: float = 130.0
@@ -18,6 +21,12 @@ extends Control
 ## Color of the outline ring drawn around the base and thumb
 @export var ring_color: Color = Color(1, 1, 1, 0.8)
 
+## If set, a press landing inside this control's global rect does not
+## activate the joystick -- it is left for that control to handle instead
+## (used to keep a press on the pause button from also spawning the
+## joystick underneath it).
+var exclude_control: Control = null
+
 ## Current input direction (normalized, or zero if not touching)
 var _direction: Vector2 = Vector2.ZERO
 
@@ -27,19 +36,17 @@ var _is_active: bool = false
 ## Touch index being tracked (-1 if using mouse)
 var _touch_index: int = -1
 
-## Center position of the joystick in local coordinates
+## Center position of the joystick in local coordinates, set to wherever the
+## activating press landed
 var _center: Vector2 = Vector2.ZERO
 
 ## Current thumb position offset from center
 var _thumb_offset: Vector2 = Vector2.ZERO
 
-func _ready() -> void:
-	# Calculate center based on the control's size
-	_center = Vector2(joystick_radius, joystick_radius)
-	# Set minimum size to contain the joystick
-	custom_minimum_size = Vector2(joystick_radius * 2, joystick_radius * 2)
-
 func _draw() -> void:
+	# Nothing to draw until a press activates the joystick at a dynamic center.
+	if not _is_active:
+		return
 	# Base: translucent fill plus a bright ring so it reads as a control
 	draw_circle(_center, joystick_radius, base_color)
 	draw_circle(_center, joystick_radius, ring_color, false, 6.0, true)
@@ -62,12 +69,9 @@ func _input(event: InputEvent) -> void:
 
 func _handle_touch(event: InputEventScreenTouch) -> void:
 	if event.pressed:
-		# Check if touch is within the joystick area
 		var local_pos = _get_local_position(event.position)
-		if _is_within_joystick(local_pos):
-			_is_active = true
-			_touch_index = event.index
-			_update_direction(local_pos)
+		if _is_within_control(local_pos) and not _is_excluded(event.position):
+			_activate(local_pos, event.index)
 	else:
 		# Touch released
 		if event.index == _touch_index:
@@ -82,10 +86,8 @@ func _handle_mouse_button(event: InputEventMouseButton) -> void:
 	if event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
 			var local_pos = _get_local_position(event.position)
-			if _is_within_joystick(local_pos):
-				_is_active = true
-				_touch_index = -1  # -1 indicates mouse
-				_update_direction(local_pos)
+			if _is_within_control(local_pos) and not _is_excluded(event.position):
+				_activate(local_pos, -1)  # -1 indicates mouse
 		else:
 			if _touch_index == -1:
 				_reset_joystick()
@@ -97,8 +99,22 @@ func _handle_mouse_motion(event: InputEventMouseMotion) -> void:
 func _get_local_position(global_pos: Vector2) -> Vector2:
 	return global_pos - global_position
 
-func _is_within_joystick(local_pos: Vector2) -> bool:
-	return local_pos.distance_to(_center) <= joystick_radius
+func _is_within_control(local_pos: Vector2) -> bool:
+	return Rect2(Vector2.ZERO, size).has_point(local_pos)
+
+## True if a GLOBAL press position lands on exclude_control, meaning this
+## joystick should leave the press alone rather than activate underneath it.
+func _is_excluded(global_pos: Vector2) -> bool:
+	return exclude_control != null and exclude_control.get_global_rect().has_point(global_pos)
+
+## Activates the joystick with its base centered on the pressed position.
+func _activate(local_pos: Vector2, index: int) -> void:
+	_is_active = true
+	_touch_index = index
+	_center = local_pos
+	_thumb_offset = Vector2.ZERO
+	_direction = Vector2.ZERO
+	queue_redraw()
 
 func _update_direction(local_pos: Vector2) -> void:
 	var offset = local_pos - _center
@@ -136,3 +152,10 @@ func set_test_direction(v: Vector2) -> void:
 	_direction = v
 	_thumb_offset = v * joystick_radius
 	queue_redraw()
+
+## Test helper: activate the floating joystick at `center` (local coords) and
+## drag the thumb toward `drag_to` (local coords), mirroring a real press +
+## drag so headless tests can exercise the floating-center math.
+func set_test_touch(center: Vector2, drag_to: Vector2) -> void:
+	_activate(center, -1)
+	_update_direction(drag_to)

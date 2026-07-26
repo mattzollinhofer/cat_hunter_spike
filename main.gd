@@ -16,6 +16,7 @@ const LEVEL_PATH := "res://levels/level_1.json"
 var _level: Dictionary
 var _cat: CharacterBody3D
 var _camera_rig: Node3D
+var _hud: CanvasLayer
 
 func _ready() -> void:
 	_level = LevelLoader.load_level(LEVEL_PATH)
@@ -126,7 +127,9 @@ func _start_hunt() -> void:
 	hud.name = "HUD"
 	hud.set_script(load("res://hud.gd"))
 	add_child(hud)
+	_hud = hud
 	hud.bind(hunt)
+	hud.set_level_name(_level.name)
 	var prey_data: Dictionary = _level.prey
 	var prey_config := {
 		"goal": prey_data.goal,
@@ -143,3 +146,4 @@ func _build_touch_controls() -> void:
 	touch.set_script(load("res://ui/touch_controls.gd"))
 	add_child(touch)
 	_cat.touch = touch
+	touch.set_joystick_exclude(_hud.get_pause_button())
