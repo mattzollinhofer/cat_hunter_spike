@@ -34,6 +34,22 @@ headless). Claude CANNOT feel-test 3D or judge whether the pounce is satisfying;
 that's a Matt-in-the-loop step. Claude cannot model/rig/animate — art comes from
 CC0 packs, AI image-to-3D, or Blender.
 
+## Hunt slice — DONE (2026-07-26), headless-verified
+
+Core loop from the sketches, built on the de-risk spike. Systems only — not yet
+feel-tuned (Matt was away). Commits `6e368f7` (mechanic) + `645f12a` (HUD).
+
+- `cat_controller.gd` — added stalk (slow/quiet) + pounce (lunge).
+- `prey.gd` — squirrel: grazes, detects the cat, flees. Tuned so you must stalk
+  close then pounce; catch is distance-based during a pounce.
+- `hunt.gd` — spawns prey, counts catches toward "catch 5 prey", tracks lives.
+- `hud.gd` — task progress + lives, top-left.
+- `tests/test_hunt.tscn` — locks the 3 rules (walk→flee, stalk→undetected,
+  pounce→catch); passes alongside the spike test.
+- Decision: cat & prey on separate physics collision layers (pounce passes
+  through for a distance-based catch; also fixed a same-layer physics explosion).
+  All flee/stalk/pounce values are tuning constants for the feel session.
+
 ## What's in the repo now (de-risk slice — DONE)
 
 - `main.gd` — builds the world (ground, sky, sun, placeholder pines) and a
@@ -63,12 +79,13 @@ non-headless run renders the cat walking the forest on the M4 (Metal, Forward+).
 
 ## TODO / next actions
 
-- [ ] Matt: play the de-risk slice, confirm follow-cam + movement feel.
-- [ ] Prototype slice: stalk/pounce state machine on the existing controller.
-- [ ] One squirrel: detection radius + line-of-sight + flee (NavigationAgent3D).
-- [ ] Tasks panel ("Kill 5 prey / Kill a rat / Darktail") + lives (diamonds) HUD.
+- [x] Prototype slice: stalk/pounce on the controller.
+- [x] One squirrel: detection + flee (simple flee vector, not NavigationAgent3D yet).
+- [x] Tasks panel ("catch 5 prey") + lives HUD.
+- [ ] Matt: play it, confirm follow-cam + movement + pounce feel.
+- [ ] Feel-tuning session (Matt playing) — the stalk/pounce constants.
 - [ ] Camp hub stub (dens + prey pile).
-- [ ] Feel-tuning session (Matt playing).
+- [ ] More prey types (rat) + the "Darktail" boss.
 - [ ] Name the game (daughter); rename repo/dir.
 - [ ] (Later) TRELLIS.2 local for the hero-cat pass.
 
