@@ -77,19 +77,40 @@ non-headless run renders the cat walking the forest on the M4 (Metal, Forward+).
 - Built the scene in code, not .tscn, to keep it robust and diffable.
 - Cost of image-to-3D is not a constraint; rig/animation quality is the real one.
 
-## TODO / next actions
+## Shipped so far (all pushed + deployed to Pages)
 
-- [x] Prototype slice: stalk/pounce on the controller.
-- [x] One squirrel: detection + flee (simple flee vector, not NavigationAgent3D yet).
-- [x] Tasks panel ("catch 5 prey") + lives HUD.
-- [ ] Matt: play it, confirm follow-cam + movement + pounce feel.
-- [ ] Feel-tuning session (Matt playing) — the stalk/pounce constants.
-- [ ] Camp hub stub (dens + prey pile).
-- [ ] More prey types (rat) + the "Darktail" boss.
-- [ ] Name the game (daughter); rename repo/dir.
-- [ ] (Later) TRELLIS.2 local for the hero-cat pass.
+- [x] De-risk spike: 3D + GLB import + follow-cam walking cat.
+- [x] Stalk/pounce hunt loop + fleeing squirrel.
+- [x] Tasks + lives HUD, then reworked to match the sketch (level name top-center,
+      diamonds top-left, tasks right, "Paws" pause bottom-left).
+- [x] Auto-deploy to GitHub Pages on every push.
+- [x] Data-driven levels (levels/*.json + level_loader.gd, validated fallback).
+- [x] Mobile touch controls: floating movement joystick + Stalk/Pounce buttons
+      (also mouse-driven, so it works in a desktop browser).
+
+Live: https://mattzollinhofer.github.io/cat_hunter_spike/  (5 headless tests pass.)
+
+## Next actions — prioritized (from the 2026-07-26 architecture review)
+
+Full review: `~/working-notes/cat-hunter-architecture-review-2026-07-26.md`.
+Full backlog (basics/graphics/abilities): `~/working-notes/cat-hunter-game.md`.
+
+ACT SOON (before/around the feel-tuning session):
+- [ ] Win/lose + make `lives` actually mean something. NOTE: what costs a life /
+      how you win is a DESIGN decision for Matt + daughter — do NOT invent it solo.
+- [ ] Prey FLEE->GRAZE transition (stalk currently works once per spawn).
+- [ ] World bounds (you can walk off the 80x80 ground into void).
+- [ ] Tuning consts -> `@export` (cat_controller.gd, prey.gd) for the feel session.
+- [ ] Sound/audio — none exists yet (footsteps, pounce, catch, ambient).
+- [ ] Matt: play it, confirm follow-cam + movement + pounce + floating-joystick feel.
+
+LATER: camp hub (dens + prey pile) · rat + Darktail boss · skill leveling · hero
+cat (her drawing -> TRELLIS/Meshy) · real CC0 trees · swim/climb abilities ·
+name the game + rename the repo (it has outgrown "spike").
 
 ## Deferred (not blockers)
 
 - SpringArm3D collision-aware camera (current cam is fixed-orientation follow).
 - Fox facing-vs-travel offset (cosmetic; real cat sets its own convention).
+- Two tiny code smells the review noted (fix when next touching those files):
+  PauseButton duplicates TouchButton; CAT_CAPTURE harness lives in cat_controller.gd.
