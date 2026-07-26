@@ -1,34 +1,55 @@
 extends CharacterBody3D
-## The cat: WASD / arrow-key movement, body turns to face its travel direction,
-## Walk / Survey (idle) animations driven from the imported Fox model, gravity.
+## The cat: walk / stalk movement, a pounce lunge, faces its travel direction,
+## Walk / Survey / Run animations, gravity.
 ##
-## Two non-interactive hooks keep the de-risk verifiable:
-##   * use_force_input / force_input — lets the headless test drive movement.
-##   * CAT_CAPTURE env var — auto-walks and saves one screenshot, then quits,
-##     so a non-headless run can produce visual proof.
+## Prey read three things off this node: `is_stalking`, `is_pouncing`, and the
+## built-in `velocity`. The stalk/pounce split is the core mechanic: prey can
+## outrun a walk, so you must stalk close (quiet) and pounce (a fast lunge) to
+## catch it.
 ##
-## The Fox (a rigged, animated CC0 quadruped from the Khronos glTF samples) is a
-## stand-in for the real cat model; it proves the exact import + animation path a
-## custom cat GLB will use later.
+## Non-interactive hooks keep the loop verifiable:
+##   * use_force_input / force_input, force_stalk, force_pounce — the headless
+##     test drives movement, stalking and pouncing.
+##   * CAT_CAPTURE env var — auto-stalks forward and saves one screenshot.
 
-const SPEED := 4.5
+const WALK_SPEED := 4.5
+const STALK_SPEED := 1.8
+const POUNCE_SPEED := 13.0
+const POUNCE_TIME := 0.4
+const POUNCE_COOLDOWN := 0.7
 const GRAVITY := 22.0
 const TURN_RATE := 9.0
-const MODEL_SCALE := 0.02  # Fox is authored ~100x; shrink to ~1.5 units tall.
+const MODEL_SCALE := 0.02
 const CAPTURE_AT_FRAME := 75
 
+# Read by prey.
+var is_stalking := false
+var is_pouncing := false
+
+# Test / capture hooks.
 var use_force_input := false
 var force_input := Vector3.ZERO
+var force_stalk := false
+var force_pounce := false
 
 var _anim: AnimationPlayer
 var _model: Node3D
+var _pounce_timer := 0.0
+var _cooldown := 0.0
+var _pounce_dir := Vector3.ZERO
+var _space_prev := false
 var _capture_path := ""
 var _frames := 0
 var _captured := false
 
 func _ready() -> void:
+	# Layer 2 = cat, mask 1 = world/ground only. The cat must NOT collide with
+	# prey (layer 4) — catching is distance-based, so a pounce passes through.
+	collision_layer = 2
+	collision_mask = 1
 	_build_collision()
 	_load_model()
+	add_to_group("cat")
 	_capture_path = OS.get_environment("CAT_CAPTURE")
 
 func _build_collision() -> void:
@@ -53,17 +74,32 @@ func _load_model() -> void:
 		_anim.play("Survey")
 
 func _physics_process(delta: float) -> void:
-	var input := _read_input()
-	if input.length() > 0.05:
-		velocity.x = input.x * SPEED
-		velocity.z = input.z * SPEED
-		var target_yaw := atan2(input.x, input.z)
-		rotation.y = lerp_angle(rotation.y, target_yaw, TURN_RATE * delta)
-		_play("Walk")
+	if _cooldown > 0.0:
+		_cooldown -= delta
+
+	if _pounce_timer > 0.0:
+		_pounce_timer -= delta
+		velocity.x = _pounce_dir.x * POUNCE_SPEED
+		velocity.z = _pounce_dir.z * POUNCE_SPEED
+		_play("Run")
 	else:
-		velocity.x = 0.0
-		velocity.z = 0.0
-		_play("Survey")
+		is_stalking = force_stalk or Input.is_physical_key_pressed(KEY_SHIFT) or _capture_active()
+		var input := _read_move_input()
+		var speed := STALK_SPEED if is_stalking else WALK_SPEED
+		if input.length() > 0.05:
+			velocity.x = input.x * speed
+			velocity.z = input.z * speed
+			var target_yaw := atan2(input.x, input.z)
+			rotation.y = lerp_angle(rotation.y, target_yaw, TURN_RATE * delta)
+			_play("Walk")
+		else:
+			velocity.x = 0.0
+			velocity.z = 0.0
+			_play("Survey")
+		if _wants_pounce() and _cooldown <= 0.0:
+			_start_pounce()
+
+	is_pouncing = _pounce_timer > 0.0
 
 	if not is_on_floor():
 		velocity.y -= GRAVITY * delta
@@ -73,11 +109,11 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	_maybe_capture()
 
-func _read_input() -> Vector3:
+func _read_move_input() -> Vector3:
 	if use_force_input:
 		return force_input.normalized()
-	if _capture_path != "":
-		return Vector3(0, 0, -1)  # auto-walk for the screenshot
+	if _capture_active():
+		return Vector3(0, 0, -1)  # stalk toward the prey for the screenshot
 	var v := Vector3.ZERO
 	if Input.is_physical_key_pressed(KEY_W) or Input.is_action_pressed("ui_up"):
 		v.z -= 1.0
@@ -89,12 +125,31 @@ func _read_input() -> Vector3:
 		v.x += 1.0
 	return v.normalized()
 
+func _wants_pounce() -> bool:
+	var down := Input.is_physical_key_pressed(KEY_SPACE)
+	var just := down and not _space_prev
+	_space_prev = down
+	if force_pounce:
+		force_pounce = false
+		return true
+	return just
+
+func _start_pounce() -> void:
+	# Lunge in the direction the cat is currently facing.
+	_pounce_dir = Vector3(sin(rotation.y), 0.0, cos(rotation.y)).normalized()
+	_pounce_timer = POUNCE_TIME
+	_cooldown = POUNCE_TIME + POUNCE_COOLDOWN
+	is_stalking = false  # a pounce is loud
+
 func _play(anim_name: String) -> void:
 	if _anim and _anim.current_animation != anim_name:
 		_anim.play(anim_name)
 
 func get_current_anim() -> String:
 	return _anim.current_animation if _anim else ""
+
+func _capture_active() -> bool:
+	return _capture_path != ""
 
 func _maybe_capture() -> void:
 	if _capture_path == "" or _captured:

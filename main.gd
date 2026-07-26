@@ -16,6 +16,7 @@ func _ready() -> void:
 	_scatter_trees()
 	_spawn_cat()
 	_build_camera()
+	_start_hunt()
 
 func _process(_delta: float) -> void:
 	# Trailing follow: track the cat's position, keep a fixed orientation so the
@@ -109,3 +110,10 @@ func _build_camera() -> void:
 	cam.position = Vector3(0, 3.0, 6.5)
 	cam.rotation_degrees = Vector3(-22, 0, 0)
 	_camera_rig.add_child(cam)
+
+func _start_hunt() -> void:
+	var hunt := Node.new()
+	hunt.name = "Hunt"
+	hunt.set_script(load("res://hunt.gd"))
+	add_child(hunt)
+	hunt.setup(_cat, self)
