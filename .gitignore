@@ -1,0 +1,12 @@
+# Godot 4 editor + import cache (regenerated on open/import)
+.godot/
+
+# Godot exports
+/build/
+export_presets.cfg
+
+# macOS
+.DS_Store
+
+# Note: *.import files ARE committed on purpose — they carry per-asset import
+# settings and are required for the project to load assets after a fresh clone.
