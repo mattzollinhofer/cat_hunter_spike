@@ -32,6 +32,10 @@ var force_input := Vector3.ZERO
 var force_stalk := false
 var force_pounce := false
 
+# Touch UI, assigned by main.gd during real play (present on desktop and mobile;
+# it also accepts mouse). Stays null only in the unit tests that build a bare cat.
+var touch: Node = null
+
 var _anim: AnimationPlayer
 var _model: Node3D
 var _pounce_timer := 0.0
@@ -83,7 +87,7 @@ func _physics_process(delta: float) -> void:
 		velocity.z = _pounce_dir.z * POUNCE_SPEED
 		_play("Run")
 	else:
-		is_stalking = force_stalk or Input.is_physical_key_pressed(KEY_SHIFT) or _capture_active()
+		is_stalking = force_stalk or Input.is_physical_key_pressed(KEY_SHIFT) or _capture_active() or (touch != null and touch.is_stalk_on())
 		var input := _read_move_input()
 		var speed := STALK_SPEED if is_stalking else WALK_SPEED
 		if input.length() > 0.05:
@@ -123,6 +127,10 @@ func _read_move_input() -> Vector3:
 		v.x -= 1.0
 	if Input.is_physical_key_pressed(KEY_D) or Input.is_action_pressed("ui_right"):
 		v.x += 1.0
+	if touch != null:
+		var joystick_dir: Vector2 = touch.get_move_direction()
+		if joystick_dir.length() > 0.2:  # deadzone
+			return Vector3(joystick_dir.x, 0.0, joystick_dir.y)  # joystick up (-Y) is forward (-Z)
 	return v.normalized()
 
 func _wants_pounce() -> bool:
@@ -132,7 +140,7 @@ func _wants_pounce() -> bool:
 	if force_pounce:
 		force_pounce = false
 		return true
-	return just
+	return just or (touch != null and touch.consume_pounce())
 
 func _start_pounce() -> void:
 	# Lunge in the direction the cat is currently facing.

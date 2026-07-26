@@ -17,6 +17,7 @@ func _ready() -> void:
 	_spawn_cat()
 	_build_camera()
 	_start_hunt()
+	_build_touch_controls()
 
 func _process(_delta: float) -> void:
 	# Trailing follow: track the cat's position, keep a fixed orientation so the
@@ -122,3 +123,10 @@ func _start_hunt() -> void:
 	add_child(hud)
 	hud.bind(hunt)
 	hunt.setup(_cat, self)
+
+func _build_touch_controls() -> void:
+	var touch := CanvasLayer.new()
+	touch.name = "TouchControls"
+	touch.set_script(load("res://ui/touch_controls.gd"))
+	add_child(touch)
+	_cat.touch = touch
