@@ -116,4 +116,9 @@ func _start_hunt() -> void:
 	hunt.name = "Hunt"
 	hunt.set_script(load("res://hunt.gd"))
 	add_child(hunt)
+	var hud := CanvasLayer.new()
+	hud.name = "HUD"
+	hud.set_script(load("res://hud.gd"))
+	add_child(hud)
+	hud.bind(hunt)
 	hunt.setup(_cat, self)
