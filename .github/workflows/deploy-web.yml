@@ -1,0 +1,53 @@
+name: Deploy Web Build
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-24.04
+    container:
+      image: barichello/godot-ci:4.5.1
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup export templates
+        run: |
+          mkdir -p /github/home/.local/share/godot/export_templates/4.5.1.stable
+          mv /root/.local/share/godot/export_templates/4.5.1.stable/* /github/home/.local/share/godot/export_templates/4.5.1.stable/
+
+      - name: Create build directory
+        run: mkdir -p build/web
+
+      - name: Export game for web
+        run: godot --headless --export-release "Web" build/web/index.html
+
+      - name: Add Cross-Origin Isolation service worker
+        run: |
+          wget -q https://raw.githubusercontent.com/gzuidhof/coi-serviceworker/master/coi-serviceworker.js -O build/web/coi-serviceworker.js
+          sed -i 's|<head>|<head><script src="coi-serviceworker.js"></script>|' build/web/index.html
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-build
+          path: build/web/
+          retention-days: 7
+
+      - name: Install rsync
+        run: |
+          apt-get update
+          apt-get install -y rsync
+
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@releases/v4
+        with:
+          branch: gh-pages
+          folder: build/web

@@ -1,9 +1,9 @@
 # Godot 4 editor + import cache (regenerated on open/import)
 .godot/
 
-# Godot exports
+# Godot exports (the web build output; export_presets.cfg IS committed so CI
+# can export the "Web" preset)
 /build/
-export_presets.cfg
 
 # macOS
 .DS_Store
