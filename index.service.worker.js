@@ -4,7 +4,7 @@
 // Incrementing CACHE_VERSION will kick off the install event and force
 // previously cached resources to be updated from the network.
 /** @type {string} */
-const CACHE_VERSION = '1785065610|3914527';
+const CACHE_VERSION = '1785065714|3714997';
 /** @type {string} */
 const CACHE_PREFIX = 'Cat Hunter Spike-sw-cache-';
 const CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
