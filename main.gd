@@ -5,11 +5,20 @@ extends Node3D
 ## cat, and a trailing follow-camera entirely in code so there is no fragile
 ## hand-authored .tscn resource data. The cat's behaviour lives in
 ## cat_controller.gd; this node only stages the scene and follows the cat.
+##
+## The world's shape (ground size/color, tree positions, cat start, prey
+## config) is data-driven: LEVEL_PATH points at a JSON file (level_loader.gd)
+## so new maps can be authored without touching this script.
 
+const LevelLoader := preload("res://level_loader.gd")
+const LEVEL_PATH := "res://levels/level_1.json"
+
+var _level: Dictionary
 var _cat: CharacterBody3D
 var _camera_rig: Node3D
 
 func _ready() -> void:
+	_level = LevelLoader.load_level(LEVEL_PATH)
 	_build_environment()
 	_build_light()
 	_build_ground()
@@ -47,9 +56,10 @@ func _build_ground() -> void:
 	var body := StaticBody3D.new()
 	var mesh := MeshInstance3D.new()
 	var plane := PlaneMesh.new()
-	plane.size = Vector2(80, 80)
+	var ground_size: float = _level.ground_size
+	plane.size = Vector2(ground_size, ground_size)
 	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.22, 0.40, 0.18)
+	mat.albedo_color = LevelLoader.to_color(_level.ground_color)
 	plane.material = mat
 	mesh.mesh = plane
 	body.add_child(mesh)
@@ -59,13 +69,8 @@ func _build_ground() -> void:
 	add_child(body)
 
 func _scatter_trees() -> void:
-	var spots := [
-		Vector3(-6, 0, -5), Vector3(5, 0, -8), Vector3(-9, 0, -12),
-		Vector3(8, 0, -3), Vector3(2, 0, -15), Vector3(-3, 0, -19),
-		Vector3(11, 0, -11), Vector3(-12, 0, -6), Vector3(4, 0, -22),
-	]
-	for spot in spots:
-		add_child(_make_tree(spot))
+	for spot in _level.trees:
+		add_child(_make_tree(LevelLoader.to_vector3(spot)))
 
 func _make_tree(pos: Vector3) -> Node3D:
 	# Placeholder pine: brown cylinder trunk + green cone canopy. Real CC0 tree
@@ -100,7 +105,7 @@ func _make_tree(pos: Vector3) -> Node3D:
 func _spawn_cat() -> void:
 	_cat = CharacterBody3D.new()
 	_cat.set_script(load("res://cat_controller.gd"))
-	_cat.position = Vector3(0, 1.0, 0)
+	_cat.position = LevelLoader.to_vector3(_level.cat_start)
 	add_child(_cat)
 
 func _build_camera() -> void:
@@ -122,7 +127,15 @@ func _start_hunt() -> void:
 	hud.set_script(load("res://hud.gd"))
 	add_child(hud)
 	hud.bind(hunt)
-	hunt.setup(_cat, self)
+	var prey_data: Dictionary = _level.prey
+	var prey_config := {
+		"goal": prey_data.goal,
+		"lives": prey_data.lives,
+		"first_spawn": LevelLoader.to_vector3(prey_data.first_spawn),
+		"spawn_radius_min": prey_data.spawn_radius_min,
+		"spawn_radius_max": prey_data.spawn_radius_max,
+	}
+	hunt.setup(_cat, self, prey_config)
 
 func _build_touch_controls() -> void:
 	var touch := CanvasLayer.new()
