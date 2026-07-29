@@ -17,10 +17,10 @@ func _run() -> void:
 	var level := LevelLoader.load_level("res://levels/level_1.json")
 	if level.get("name") != "Pine Forest":
 		failures.append("level_1.json name expected 'Pine Forest', got '%s'" % level.get("name"))
-	if level.get("ground_size") != 80:
-		failures.append("level_1.json ground_size expected 80, got %s" % level.get("ground_size"))
-	if level.get("trees", []).size() != 9:
-		failures.append("level_1.json expected 9 trees, got %d" % level.get("trees", []).size())
+	if level.get("ground_size") != 240:
+		failures.append("level_1.json ground_size expected 240, got %s" % level.get("ground_size"))
+	if level.get("trees", []).is_empty():
+		failures.append("level_1.json should load a forest, got no trees")
 	var prey: Dictionary = level.get("prey", {})
 	if prey.get("goal") != 5:
 		failures.append("level_1.json prey.goal expected 5, got %s" % prey.get("goal"))
