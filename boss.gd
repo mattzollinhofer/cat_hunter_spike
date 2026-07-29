@@ -37,6 +37,7 @@ const FLASH_TIME := 0.5    # how long the hurt flash lasts
 const BLINK_RATE := 12.0   # flash blinks per second
 
 signal health_changed(lives: int, health: int)
+signal hit_cat  # a headbutt landed -> the fox loses one health
 signal defeated
 
 var _anim: AnimationPlayer
@@ -135,12 +136,15 @@ func _chase(delta: float) -> void:
 		global_position += to_cat.normalized() * step
 		_locomote("Walk")
 	else:
-		# Close enough to attack: headbutt the fox on a gentle cadence.
+		# Close enough to attack: headbutt the fox on a gentle cadence. Each
+		# headbutt lands, so the fox loses one health per swing rather than per
+		# frame spent standing next to the bull.
 		_headbutt_timer -= delta
 		if _headbutt_timer <= 0.0:
 			_headbutt_timer = HEADBUTT_GAP
 			if _anim.has_animation("Attack_Headbutt"):
 				_anim.play("Attack_Headbutt")
+			hit_cat.emit()
 		else:
 			_locomote(_idle_anim)
 

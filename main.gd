@@ -167,8 +167,8 @@ func _spawn_boss_preview() -> void:
 		_boss = boss
 
 func _build_camera() -> void:
-	# Orbit camera: trails the cat, swings around behind it as it moves, and can
-	# be aimed by hand with a left-drag. All of that lives in camera_rig.gd.
+	# Orbit camera: trails the cat and swings around it on a left-drag. The
+	# following and the mouse-look both live in camera_rig.gd.
 	_camera_rig = CameraRig.new()
 	add_child(_camera_rig)
 	_camera_rig.setup(_cat)
@@ -206,6 +206,10 @@ func _wire_boss_fight() -> void:
 	_hunt.goal_reached.connect(_boss.activate)
 	_boss.health_changed.connect(_hud.set_boss_health)
 	_boss.defeated.connect(_hud.show_win)
+	# The bull's headbutt costs the fox one health; the hunt owns that rule and the
+	# HUD just shows the result.
+	_boss.hit_cat.connect(_hunt.take_damage)
+	_hunt.health_changed.connect(_hud.set_fox_health)
 
 func _build_touch_controls() -> void:
 	var touch := CanvasLayer.new()

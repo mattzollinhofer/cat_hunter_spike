@@ -9,10 +9,14 @@ extends Node
 
 signal progress_changed(kills: int, goal: int)
 signal lives_changed(lives: int)
+signal health_changed(health: int)
 signal goal_reached
 
 const DEFAULT_GOAL := 5
 const DEFAULT_LIVES := 6
+## Health within one life. Four hits from the bull empty a life (the game's young
+## designer set this), then the health refills for the next life.
+const HEALTH_PER_LIFE := 4
 const DEFAULT_FIRST_SPAWN := Vector3(0, 0.5, -6)
 const DEFAULT_SPAWN_RADIUS_MIN := 6.0
 const DEFAULT_SPAWN_RADIUS_MAX := 12.0
@@ -20,6 +24,7 @@ const DEFAULT_SPAWN_RADIUS_MAX := 12.0
 var kills := 0
 var goal := DEFAULT_GOAL
 var lives := DEFAULT_LIVES
+var health := HEALTH_PER_LIFE
 
 var _cat: Node3D
 var _world: Node3D
@@ -39,6 +44,19 @@ func setup(cat: Node3D, world: Node3D, config: Dictionary) -> void:
 	_spawn_prey()
 	progress_changed.emit(kills, goal)
 	lives_changed.emit(lives)
+	health_changed.emit(health)
+
+## Takes one hit off the fox -- currently only the bull's headbutt does this.
+## Emptying the health costs a life and refills the health for that new life.
+func take_damage() -> void:
+	if lives <= 0:
+		return
+	health -= 1
+	if health <= 0:
+		lives = maxi(lives - 1, 0)
+		health = HEALTH_PER_LIFE
+		lives_changed.emit(lives)
+	health_changed.emit(health)
 
 func _spawn_prey() -> void:
 	var prey := CharacterBody3D.new()

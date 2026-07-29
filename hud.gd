@@ -17,6 +17,7 @@ class LivesDisplay extends Control:
 	const DIAMOND_SIZE := Vector2(20, 26)
 	const DIAMOND_GAP := 8.0
 
+	var diamond_color := Color(0.95, 0.25, 0.35)
 	var _lives := 0
 
 	func set_lives(lives: int) -> void:
@@ -40,7 +41,7 @@ class LivesDisplay extends Control:
 				Vector2(cx, DIAMOND_SIZE.y),
 				Vector2(left, DIAMOND_SIZE.y / 2.0),
 			])
-			draw_colored_polygon(points, Color(0.95, 0.25, 0.35))
+			draw_colored_polygon(points, diamond_color)
 			draw_polyline(PackedVector2Array([points[0], points[1], points[2], points[3], points[0]]),
 				Color(1, 1, 1, 0.9), 2.0, true)
 
@@ -158,13 +159,17 @@ var _lives_display: LivesDisplay
 var _pause_button: PauseButton
 var _pause_overlay: PauseOverlay
 var _win_label: Label
+var _fox_health_display: LivesDisplay
 var _top_bar: HBoxContainer
+
+const FOX_START_HEALTH := 4
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_build_level_title()
 	_build_top_bar()
 	_build_lives()
+	_build_fox_health()
 	_build_tasks()
 	_build_pause_button()
 	_build_pause_overlay()
@@ -211,6 +216,29 @@ func show_win() -> void:
 func is_win_shown() -> bool:
 	return _win_label.visible
 
+## Sets how many health icons the fox shows.
+func set_fox_health(health: int) -> void:
+	_fox_health_display.set_lives(health)
+
+## Test getter for the fox's displayed health.
+func get_fox_health() -> int:
+	return _fox_health_display.get_lives()
+
+func _build_fox_health() -> void:
+	# The fox's own health, in green diamonds right next to the lives, so both read
+	# as one status row. Distinct color from the red lives.
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", _make_panel_style())
+	var hbox := HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 10)
+	panel.add_child(hbox)
+	hbox.add_child(_make_label("Health", 16, Color(0.85, 0.85, 0.9)))
+	_fox_health_display = LivesDisplay.new()
+	_fox_health_display.diamond_color = Color(0.4, 0.85, 0.5)
+	hbox.add_child(_fox_health_display)
+	_top_bar.add_child(panel)
+	_fox_health_display.set_lives(FOX_START_HEALTH)
+
 func _build_win_banner() -> void:
 	# Hidden until the bull is beaten, then a big celebratory banner over the game.
 	_win_label = _make_label("YOU WIN!", 56, Color(1, 0.86, 0.4))
@@ -241,8 +269,7 @@ func _build_level_title() -> void:
 	add_child(_level_label)
 
 func _build_top_bar() -> void:
-	# A top-left row that holds the lives and anything else that belongs beside
-	# them, so status readouts line up instead of each anchoring itself.
+	# A top-left row that holds the lives and the fox's health side by side.
 	_top_bar = HBoxContainer.new()
 	_top_bar.add_theme_constant_override("separation", 12)
 	_top_bar.anchor_left = 0.0
