@@ -13,6 +13,7 @@ extends CharacterBody3D
 ##   * CAT_CAPTURE env var — auto-stalks forward and saves one screenshot.
 
 const WALK_SPEED := 4.5
+const RUN_SPEED := 9.0        # hold Option; loud, so it is travel, not hunting
 const STALK_SPEED := 1.8
 const POUNCE_SPEED := 13.0
 const POUNCE_TIME := 0.4
@@ -24,12 +25,14 @@ const CAPTURE_AT_FRAME := 75
 
 # Read by prey.
 var is_stalking := false
+var is_running := false
 var is_pouncing := false
 
 # Test / capture hooks.
 var use_force_input := false
 var force_input := Vector3.ZERO
 var force_stalk := false
+var force_run := false
 var force_pounce := false
 
 # Touch UI, assigned by main.gd during real play (present on desktop and mobile;
@@ -88,14 +91,21 @@ func _physics_process(delta: float) -> void:
 		_play("Run")
 	else:
 		is_stalking = force_stalk or Input.is_physical_key_pressed(KEY_SHIFT) or _capture_active() or (touch != null and touch.is_stalk_on())
+		# Stalking wins over running: a sneak that could be sprinted would turn the
+		# stalk-and-pounce hunt into a footrace.
+		is_running = not is_stalking and _wants_run()
 		var input := _read_move_input()
-		var speed := STALK_SPEED if is_stalking else WALK_SPEED
+		var speed := WALK_SPEED
+		if is_stalking:
+			speed = STALK_SPEED
+		elif is_running:
+			speed = RUN_SPEED
 		if input.length() > 0.05:
 			velocity.x = input.x * speed
 			velocity.z = input.z * speed
 			var target_yaw := atan2(input.x, input.z)
 			rotation.y = lerp_angle(rotation.y, target_yaw, TURN_RATE * delta)
-			_play("Walk")
+			_play("Run" if is_running else "Walk")
 		else:
 			velocity.x = 0.0
 			velocity.z = 0.0
@@ -132,6 +142,11 @@ func _read_move_input() -> Vector3:
 		if joystick_dir.length() > 0.2:  # deadzone
 			return Vector3(joystick_dir.x, 0.0, joystick_dir.y)  # joystick up (-Y) is forward (-Z)
 	return v.normalized()
+
+func _wants_run() -> bool:
+	# Option (Alt), not Ctrl: Ctrl + arrow is a Mac desktop-switching shortcut and
+	# would steal the key mid-run.
+	return force_run or Input.is_physical_key_pressed(KEY_ALT)
 
 func _wants_pounce() -> bool:
 	var down := Input.is_physical_key_pressed(KEY_SPACE)
