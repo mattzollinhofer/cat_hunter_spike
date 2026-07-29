@@ -11,6 +11,7 @@ extends Node3D
 ## so new maps can be authored without touching this script.
 
 const LevelLoader := preload("res://level_loader.gd")
+const Fence := preload("res://fence.gd")
 const LEVEL_PATH := "res://levels/level_1.json"
 
 var _level: Dictionary
@@ -23,6 +24,7 @@ func _ready() -> void:
 	_build_environment()
 	_build_light()
 	_build_ground()
+	_build_fence()
 	_scatter_trees()
 	_spawn_cat()
 	_build_camera()
@@ -68,6 +70,13 @@ func _build_ground() -> void:
 	col.shape = WorldBoundaryShape3D.new()
 	body.add_child(col)
 	add_child(body)
+
+func _build_fence() -> void:
+	# Marks the territory edge so the player can see where the world ends. Sized
+	# from the same ground_size as everything else, so it never drifts off the map.
+	var fence := Fence.new()
+	add_child(fence)
+	fence.build(_level.ground_size)
 
 func _scatter_trees() -> void:
 	for spot in _level.trees:
