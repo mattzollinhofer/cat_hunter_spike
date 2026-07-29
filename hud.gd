@@ -158,10 +158,12 @@ var _lives_display: LivesDisplay
 var _pause_button: PauseButton
 var _pause_overlay: PauseOverlay
 var _win_label: Label
+var _top_bar: HBoxContainer
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_build_level_title()
+	_build_top_bar()
 	_build_lives()
 	_build_tasks()
 	_build_pause_button()
@@ -238,14 +240,20 @@ func _build_level_title() -> void:
 	_level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	add_child(_level_label)
 
+func _build_top_bar() -> void:
+	# A top-left row that holds the lives and anything else that belongs beside
+	# them, so status readouts line up instead of each anchoring itself.
+	_top_bar = HBoxContainer.new()
+	_top_bar.add_theme_constant_override("separation", 12)
+	_top_bar.anchor_left = 0.0
+	_top_bar.anchor_top = 0.0
+	_top_bar.offset_left = PANEL_MARGIN
+	_top_bar.offset_top = PANEL_MARGIN
+	add_child(_top_bar)
+
 func _build_lives() -> void:
 	# Lives diamonds in the top-left corner, per the sketch.
-	var panel := _make_lives_panel()
-	panel.anchor_left = 0.0
-	panel.anchor_top = 0.0
-	panel.offset_left = PANEL_MARGIN
-	panel.offset_top = PANEL_MARGIN
-	add_child(panel)
+	_top_bar.add_child(_make_lives_panel())
 
 func _build_tasks() -> void:
 	# Tasks panel (with the level name) on the right side, per the sketch. Anchored
