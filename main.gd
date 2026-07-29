@@ -25,6 +25,7 @@ func _ready() -> void:
 	_build_environment()
 	_build_light()
 	_build_ground()
+	_build_bounds()
 	_build_fence()
 	_scatter_trees()
 	_spawn_cat()
@@ -65,6 +66,32 @@ func _build_ground() -> void:
 	col.shape = WorldBoundaryShape3D.new()
 	body.add_child(col)
 	add_child(body)
+
+func _build_bounds() -> void:
+	# Invisible walls around the territory edge so the cat and prey can't leave
+	# the visible ground. Sized from the level's ground_size, so the border always
+	# matches the map. The ground itself is an infinite floor (no falling through);
+	# these four walls provide the horizontal boundary.
+	var size: float = _level.ground_size
+	var half := size / 2.0
+	var height := 8.0
+	var thickness := 1.0
+	var walls := [
+		[Vector3(0.0, height / 2.0, -half), Vector3(size, height, thickness)],  # north (-Z)
+		[Vector3(0.0, height / 2.0, half), Vector3(size, height, thickness)],   # south (+Z)
+		[Vector3(-half, height / 2.0, 0.0), Vector3(thickness, height, size)],  # west (-X)
+		[Vector3(half, height / 2.0, 0.0), Vector3(thickness, height, size)],   # east (+X)
+	]
+	for wall in walls:
+		var body := StaticBody3D.new()
+		body.collision_layer = 1  # world layer; cat (mask 1) and prey (mask 1) collide with it
+		body.position = wall[0]
+		var col := CollisionShape3D.new()
+		var box := BoxShape3D.new()
+		box.size = wall[1]
+		col.shape = box
+		body.add_child(col)
+		add_child(body)
 
 func _build_fence() -> void:
 	# Marks the territory edge so the player can see where the world ends. Sized
