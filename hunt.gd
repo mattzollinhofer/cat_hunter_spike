@@ -9,6 +9,7 @@ extends Node
 
 signal progress_changed(kills: int, goal: int)
 signal lives_changed(lives: int)
+signal goal_reached
 
 const DEFAULT_GOAL := 5
 const DEFAULT_LIVES := 6
@@ -60,3 +61,5 @@ func _on_caught() -> void:
 	progress_changed.emit(kills, goal)
 	if kills < goal:
 		_spawn_prey()
+	else:
+		goal_reached.emit()  # prey phase done -> wake the boss

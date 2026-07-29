@@ -11,14 +11,25 @@ extends Node3D
 ## so new maps can be authored without touching this script.
 
 const LevelLoader := preload("res://level_loader.gd")
+const Boss := preload("res://boss.gd")
 const Fence := preload("res://fence.gd")
 const CameraRig := preload("res://camera_rig.gd")
 const LEVEL_PATH := "res://levels/level_1.json"
+
+# Preview roster: one Bull model reskinned into distinct bosses by color + size.
+# These just stand and idle for now -- a look at the roster mechanic, not a real
+# encounter. Boss combat is a later, design-driven step; when it lands this data
+# moves into the level file.
+const BOSS_PREVIEW := [
+	{"name": "Emberhorn", "color": Color(0.55, 0.09, 0.06), "size": 0.75, "pos": Vector3(0, 0, -26)},
+]
 
 var _level: Dictionary
 var _cat: CharacterBody3D
 var _camera_rig: Node3D
 var _hud: CanvasLayer
+var _boss: Node3D
+var _hunt: Node
 
 func _ready() -> void:
 	_level = LevelLoader.load_level(LEVEL_PATH)
@@ -29,6 +40,7 @@ func _ready() -> void:
 	_build_fence()
 	_scatter_trees()
 	_spawn_cat()
+	_spawn_boss_preview()
 	_build_camera()
 	_start_hunt()
 	_build_touch_controls()
@@ -140,6 +152,20 @@ func _spawn_cat() -> void:
 	_cat.position = LevelLoader.to_vector3(_level.cat_start)
 	add_child(_cat)
 
+func _spawn_boss_preview() -> void:
+	var cat_start := LevelLoader.to_vector3(_level.cat_start)
+	for data in BOSS_PREVIEW:
+		var boss := Boss.new()
+		add_child(boss)
+		boss.global_position = data.pos
+		# Turn to face the cat's start, kept level (same height) so the boss stands
+		# upright instead of tilting its head down at the ground.
+		var look_target := Vector3(cat_start.x, data.pos.y, cat_start.z)
+		if not boss.global_position.is_equal_approx(look_target):
+			boss.look_at(look_target, Vector3.UP)
+		boss.setup(data.color, data.size)
+		_boss = boss
+
 func _build_camera() -> void:
 	# Orbit camera: trails the cat, swings around behind it as it moves, and can
 	# be aimed by hand with a left-drag. All of that lives in camera_rig.gd.
@@ -168,6 +194,18 @@ func _start_hunt() -> void:
 		"spawn_radius_max": prey_data.spawn_radius_max,
 	}
 	hunt.setup(_cat, self, prey_config)
+	_hunt = hunt
+	_wire_boss_fight()
+
+func _wire_boss_fight() -> void:
+	# Catching all the prey wakes the bull; biting it drives its health down and
+	# beating it shows the win banner. The HUD and boss never reference each other
+	# directly -- this node connects them.
+	if _boss == null:
+		return
+	_hunt.goal_reached.connect(_boss.activate)
+	_boss.health_changed.connect(_hud.set_boss_health)
+	_boss.defeated.connect(_hud.show_win)
 
 func _build_touch_controls() -> void:
 	var touch := CanvasLayer.new()

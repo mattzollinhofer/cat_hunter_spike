@@ -157,6 +157,7 @@ var _task_label: Label
 var _lives_display: LivesDisplay
 var _pause_button: PauseButton
 var _pause_overlay: PauseOverlay
+var _win_label: Label
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -165,6 +166,7 @@ func _ready() -> void:
 	_build_tasks()
 	_build_pause_button()
 	_build_pause_overlay()
+	_build_win_banner()
 
 func bind(hunt: Node) -> void:
 	hunt.progress_changed.connect(_on_progress)
@@ -192,6 +194,30 @@ func simulate_pause_press() -> void:
 ## floating joystick) can exclude its rect from their own hit-testing.
 func get_pause_button() -> Control:
 	return _pause_button
+
+## Switches the task to the boss fight and shows the bull's remaining lives and
+## the health left in the current life.
+func set_boss_health(lives: int, health: int) -> void:
+	_task_label.text = "Beat the bull!   Lives: %d   Health: %d" % [lives, health]
+
+## Big centered "YOU WIN!" once the bull is beaten.
+func show_win() -> void:
+	_win_label.visible = true
+	_task_label.text = "You beat the bull!"
+
+## Test getter for the win banner's visibility.
+func is_win_shown() -> bool:
+	return _win_label.visible
+
+func _build_win_banner() -> void:
+	# Hidden until the bull is beaten, then a big celebratory banner over the game.
+	_win_label = _make_label("YOU WIN!", 56, Color(1, 0.86, 0.4))
+	_win_label.anchor_right = 1.0
+	_win_label.anchor_bottom = 1.0
+	_win_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_win_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_win_label.visible = false
+	add_child(_win_label)
 
 func _on_progress(kills: int, goal: int) -> void:
 	_task_label.text = "Catch prey   %d / %d" % [kills, goal]
