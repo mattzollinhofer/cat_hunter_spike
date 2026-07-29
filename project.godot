@@ -1,14 +1,22 @@
-; Cat Hunter — de-risk spike (Godot 4.5)
-; Throwaway project proving: CC0 rigged/animated GLB import + a follow-cam
-; third-person walking controller. Not the real game repo.
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
 
 config_version=5
+
+[animation]
+
+compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 [application]
 
 config/name="Cat Hunter Spike"
 run/main_scene="res://main.tscn"
-config/features=PackedStringArray("4.5", "GL Compatibility")
+config/features=PackedStringArray("4.7", "GL Compatibility")
 
 [display]
 
@@ -20,7 +28,5 @@ window/size/viewport_height=1200
 
 [rendering]
 
-; Compatibility (WebGL2 / OpenGL) is the only renderer that runs in a browser,
-; so the whole project uses it — desktop and web render the same way.
 renderer/rendering_method="gl_compatibility"
 textures/vram_compression/import_etc2_astc=true
