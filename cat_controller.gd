@@ -18,6 +18,9 @@ const STALK_SPEED := 1.8
 const POUNCE_SPEED := 13.0
 const POUNCE_TIME := 0.4
 const POUNCE_COOLDOWN := 0.7
+const BITE_TIME := 0.22        # a quick chomp, much shorter than a pounce
+const BITE_LUNGE := 3.5        # a small forward snap, not a big leap
+const BITE_COOLDOWN := 0.35
 const GRAVITY := 22.0
 const TURN_RATE := 9.0
 const MODEL_SCALE := 0.02
@@ -27,6 +30,7 @@ const CAPTURE_AT_FRAME := 75
 var is_stalking := false
 var is_running := false
 var is_pouncing := false
+var is_biting := false
 
 # Test / capture hooks.
 var use_force_input := false
@@ -34,6 +38,7 @@ var force_input := Vector3.ZERO
 var force_stalk := false
 var force_run := false
 var force_pounce := false
+var force_bite := false
 
 # Touch UI, assigned by main.gd during real play (present on desktop and mobile;
 # it also accepts mouse). Stays null only in the unit tests that build a bare cat.
@@ -50,6 +55,9 @@ var _pounce_timer := 0.0
 var _cooldown := 0.0
 var _pounce_dir := Vector3.ZERO
 var _space_prev := false
+var _bite_timer := 0.0
+var _bite_dir := Vector3.ZERO
+var _bite_prev := false
 var _capture_path := ""
 var _frames := 0
 var _captured := false
@@ -94,6 +102,13 @@ func _physics_process(delta: float) -> void:
 		velocity.x = _pounce_dir.x * POUNCE_SPEED
 		velocity.z = _pounce_dir.z * POUNCE_SPEED
 		_play("Run")
+	elif _bite_timer > 0.0:
+		# A quick chomp: a short forward snap. The fox has no bite clip, so reuse
+		# its fastest animation and let the lunge motion sell the grab.
+		_bite_timer -= delta
+		velocity.x = _bite_dir.x * BITE_LUNGE
+		velocity.z = _bite_dir.z * BITE_LUNGE
+		_play("Run")
 	else:
 		is_stalking = force_stalk or Input.is_physical_key_pressed(KEY_SHIFT) or _capture_active() or (touch != null and touch.is_stalk_on())
 		# Stalking wins over running: a sneak that could be sprinted would turn the
@@ -117,8 +132,11 @@ func _physics_process(delta: float) -> void:
 			_play("Survey")
 		if _wants_pounce() and _cooldown <= 0.0:
 			_start_pounce()
+		elif _wants_bite() and _cooldown <= 0.0:
+			_start_bite()
 
 	is_pouncing = _pounce_timer > 0.0
+	is_biting = _bite_timer > 0.0
 
 	if not is_on_floor():
 		velocity.y -= GRAVITY * delta
@@ -168,6 +186,21 @@ func _start_pounce() -> void:
 	_pounce_timer = POUNCE_TIME
 	_cooldown = POUNCE_TIME + POUNCE_COOLDOWN
 	is_stalking = false  # a pounce is loud
+
+func _wants_bite() -> bool:
+	var down := Input.is_physical_key_pressed(KEY_B)
+	var just := down and not _bite_prev
+	_bite_prev = down
+	if force_bite:
+		force_bite = false
+		return true
+	return just or (touch != null and touch.consume_bite())
+
+func _start_bite() -> void:
+	# Snap forward the way the fox is facing, a small version of the pounce lunge.
+	_bite_dir = Vector3(sin(rotation.y), 0.0, cos(rotation.y)).normalized()
+	_bite_timer = BITE_TIME
+	_cooldown = BITE_TIME + BITE_COOLDOWN
 
 func _play(anim_name: String) -> void:
 	if _anim and _anim.current_animation != anim_name:

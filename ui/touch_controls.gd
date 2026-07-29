@@ -110,11 +110,13 @@ class TouchButton extends Control:
 var _joystick: Control
 var _pounce_button: TouchButton
 var _stalk_button: TouchButton
+var _bite_button: TouchButton
 
 func _ready() -> void:
 	_build_joystick()
 	_build_pounce_button()
 	_build_stalk_button()
+	_build_bite_button()
 
 func _build_joystick() -> void:
 	_joystick = Control.new()
@@ -150,6 +152,16 @@ func _build_stalk_button() -> void:
 	_position_bottom_right(_stalk_button, _pounce_button.offset_top - BUTTON_GAP)
 	add_child(_stalk_button)
 
+func _build_bite_button() -> void:
+	_bite_button = TouchButton.new()
+	_bite_button.name = "BiteButton"
+	_bite_button.fill_color = Color(0.7, 0.55, 0.1, 0.5)
+	_bite_button.core_color = Color(1, 0.9, 0.4, 0.9)
+	_bite_button.core_on_color = Color(1, 1, 0.7, 1)
+	# Stacked above the stalk button, sharing the same right edge.
+	_position_bottom_right(_bite_button, _stalk_button.offset_top - BUTTON_GAP)
+	add_child(_bite_button)
+
 func _position_bottom_right(button: TouchButton, bottom_offset: float) -> void:
 	button.anchor_left = 1.0
 	button.anchor_top = 1.0
@@ -171,6 +183,10 @@ func is_stalk_on() -> bool:
 ## Returns true exactly once per pounce button press (one-shot).
 func consume_pounce() -> bool:
 	return _pounce_button.consume_press()
+
+## Returns true exactly once per bite button press (one-shot).
+func consume_bite() -> bool:
+	return _bite_button.consume_press()
 
 ## Excludes taps landing on `control` from activating the joystick, so a tap
 ## on that control (e.g. the pause button) isn't also swallowed by the
