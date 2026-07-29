@@ -12,6 +12,7 @@ extends Node3D
 
 const LevelLoader := preload("res://level_loader.gd")
 const Fence := preload("res://fence.gd")
+const CameraRig := preload("res://camera_rig.gd")
 const LEVEL_PATH := "res://levels/level_1.json"
 
 var _level: Dictionary
@@ -30,12 +31,6 @@ func _ready() -> void:
 	_build_camera()
 	_start_hunt()
 	_build_touch_controls()
-
-func _process(_delta: float) -> void:
-	# Trailing follow: track the cat's position, keep a fixed orientation so the
-	# camera never whips around when the cat turns to face its travel direction.
-	if _cat and _camera_rig:
-		_camera_rig.global_position = _camera_rig.global_position.lerp(_cat.global_position, 0.12)
 
 func _build_environment() -> void:
 	var env := Environment.new()
@@ -119,13 +114,11 @@ func _spawn_cat() -> void:
 	add_child(_cat)
 
 func _build_camera() -> void:
-	_camera_rig = Node3D.new()
+	# Orbit camera: trails the cat, swings around behind it as it moves, and can
+	# be aimed by hand with a left-drag. All of that lives in camera_rig.gd.
+	_camera_rig = CameraRig.new()
 	add_child(_camera_rig)
-	_camera_rig.global_position = _cat.global_position
-	var cam := Camera3D.new()
-	cam.position = Vector3(0, 3.0, 6.5)
-	cam.rotation_degrees = Vector3(-22, 0, 0)
-	_camera_rig.add_child(cam)
+	_camera_rig.setup(_cat)
 
 func _start_hunt() -> void:
 	var hunt := Node.new()

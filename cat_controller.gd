@@ -39,6 +39,11 @@ var force_pounce := false
 # it also accepts mouse). Stays null only in the unit tests that build a bare cat.
 var touch: Node = null
 
+# Which way the camera is facing, published by camera_rig.gd. Keyboard and
+# joystick input is turned by this, so "forward" always means away from the
+# camera. Stays 0 in the unit tests, where it is the identity.
+var camera_yaw := 0.0
+
 var _anim: AnimationPlayer
 var _model: Node3D
 var _pounce_timer := 0.0
@@ -140,8 +145,8 @@ func _read_move_input() -> Vector3:
 	if touch != null:
 		var joystick_dir: Vector2 = touch.get_move_direction()
 		if joystick_dir.length() > 0.2:  # deadzone
-			return Vector3(joystick_dir.x, 0.0, joystick_dir.y)  # joystick up (-Y) is forward (-Z)
-	return v.normalized()
+			v = Vector3(joystick_dir.x, 0.0, joystick_dir.y)  # joystick up (-Y) is forward (-Z)
+	return v.normalized().rotated(Vector3.UP, camera_yaw)
 
 func _wants_run() -> bool:
 	# Option (Alt), not Ctrl: Ctrl + arrow is a Mac desktop-switching shortcut and
