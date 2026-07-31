@@ -1,5 +1,6 @@
 extends CharacterBody3D
-## Prey (squirrel stand-in): grazes until the cat gets close, then flees.
+## Prey: a deer shrunk down to squirrel size. It grazes (Eating) until the cat
+## gets close, then bolts (Gallop).
 ##
 ## The tuning is the whole game: the cat can only catch prey by POUNCING within
 ## CATCH_RADIUS. Walking toward prey is detected far away (BASE_DETECT) and prey
@@ -8,6 +9,9 @@ extends CharacterBody3D
 ## the stalk-then-pounce loop from the sketches.
 
 signal caught
+
+const DEER: PackedScene = preload("res://assets/Deer.gltf")
+const MODEL_SCALE := 0.4     # a small deer -- bigger than a squirrel, still prey-sized
 
 const BASE_DETECT := 7.0     # spotted this far off while the cat walks
 const STALK_DETECT := 3.0    # ...only this far while the cat stalks (quiet)
@@ -20,6 +24,7 @@ enum { GRAZE, FLEE }
 
 var target: Node3D  # the cat
 var _state := GRAZE
+var _anim: AnimationPlayer
 
 func _ready() -> void:
 	# Layer 4 = prey, mask 1 = world/ground only. Prey never physically collides
@@ -30,6 +35,9 @@ func _ready() -> void:
 	_build_body()
 
 func _build_body() -> void:
+	# A small collision capsule keeps the prey standing on the ground; the visible
+	# body is the tiny deer model. Catching stays distance-based, so the capsule
+	# size only matters for gravity/standing, not for being caught.
 	var col := CollisionShape3D.new()
 	var shape := CapsuleShape3D.new()
 	shape.radius = 0.28
@@ -37,16 +45,15 @@ func _build_body() -> void:
 	col.shape = shape
 	col.position.y = 0.35
 	add_child(col)
-	var mesh := MeshInstance3D.new()
-	var body := CapsuleMesh.new()
-	body.radius = 0.28
-	body.height = 0.7
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.55, 0.42, 0.28)  # squirrel brown
-	body.material = mat
-	mesh.mesh = body
-	mesh.position.y = 0.35
-	add_child(mesh)
+	var model := DEER.instantiate()
+	model.scale = Vector3.ONE * MODEL_SCALE
+	add_child(model)
+	_anim = model.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	if _anim:
+		for clip in ["Eating", "Gallop"]:
+			if _anim.has_animation(clip):
+				_anim.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
+		_play("Eating")  # grazing until spooked
 
 func _physics_process(delta: float) -> void:
 	if target == null or not is_instance_valid(target):
@@ -59,6 +66,7 @@ func _physics_process(delta: float) -> void:
 	var detect: float = STALK_DETECT if target.is_stalking else BASE_DETECT
 	if _state == GRAZE and (dist < PANIC or dist < detect):
 		_state = FLEE
+		_play("Gallop")  # bolt
 
 	if _state == FLEE and flat.length() > 0.001:
 		var away := Vector3(flat.x, 0.0, flat.y).normalized()
@@ -79,6 +87,10 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.y = 0.0
 	move_and_slide()
+
+func _play(anim_name: String) -> void:
+	if _anim and _anim.has_animation(anim_name) and _anim.current_animation != anim_name:
+		_anim.play(anim_name)
 
 func get_state() -> int:
 	return _state
